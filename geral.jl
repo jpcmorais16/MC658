@@ -6,74 +6,94 @@
 
 function ConstructInitialSolution(G::RouteType)
 
+    P::Vector{MyInt} =  Vector{MyInt}(undef,G.K) # position of pick i inside the solution vector
+    D::Vector{MyInt} =  Vector{MyInt}(undef,G.K) # position of delivery i inside the solution vector
+    S::Vector{MyInt} =  Vector{MyInt}(undef,2 * G.K) # Solution vector
+
+    S[1] = 1
+    S[2*G.K] = 1 + G.K
+
+    for i in 2:G.K-1
+        S[i] = i
+        S[i + 1] = i + G.K
+        i = i + 1
+    end
+
+    P[1] = 1
+    D[1] = 2*G.K
+
+    for i in 2:G.K - 1
+        P[i] = i
+        D[i] = i + 1
+    end
+
+    S[1] = 1          
+    S[2*G.K] = 1 + G.K 
+
+    return S, P, D
+end
+
+function HeuristicCost(G::RouteType, S::Vector{MyInt}, P::Vector{MyInt}, D::Vector{MyInt})
+    
+    TotalCost = 0
+    
+    for i in 1:G.K - 1
+        TotalCost = TotalCost + G.Dist[S[i],S[i+1]]
+        i = i + 1
+    end
+
+    for i in 1:G.K
+        if (D[i] < P[i])
+            TotalCost = Inf
+            return TotalCost
+        end
+
+        TotalTime = 0
+
+        for j in P[i]:D[i] - 1  
+            TotalTime = TotalTime + G.Time[S[j],S[j+1]]
+        end
+
+        if (TotalTime > G.Delta[i])
+            TotalCost = Inf
+            return TotalCost
+        end
+    end
+
+    TotalCost = TotalCost + G.Dist[S[G.K],S[2*G.K]]
+
+    return TotalCost
 end
 
 
-function LocalSearchStep(G::RouteType, H::Vector{MyInt})
+function LocalSearchStep(G::RouteType, S::Vector{MyInt})
 
-    a = MyRand(2,G.K)
-    b = MyRand(2,G.K)
+    a = MyRand(2,2*G.K-1)
+    b = MyRand(2,2*G.K-1)
     if (a==b)
         continue
     end
-    aux=H[a]
-    H[a]=H[b]
-    H[b]=aux
-    ChangedSolutionValue = DummyHeuristicCost(G,H)
-    if (ChangedSolutionValue < CurrBestSolutionValue)
-        # Solucao melhor. Mantem a troca e atualiza o valor desta solucao.
-        println("Solucao heuristica melhorou de ",CurrBestSolutionValue," para ",ChangedSolutionValue,".")
-        CurrBestSolutionValue = ChangedSolutionValue
-    else
-        # Troca nao melhorou. Desfaz a troca.
-        aux=H[a]
-        H[a]=H[b]
-        H[b]=aux
-    end
+    aux=S[a]
+    S[a]=S[b]
+    S[b]=aux
 end
 
 
-function TabuSearch(G::RouteType, MaxTimeSeconds::MyInt, H::Vector{MyInt})
+function TabuSearch(G::RouteType, MaxTimeSeconds::MyInt)
     StartingTimeSeconds = time()
+
+    S, P, D = ConstructInitialSolution(G)
     
     # Initialize best solution and its value
-    BestSolution = copy(H)
-    BestSolutionValue = DummyHeuristicCost(G, H)
+    BestSolution = copy(S)
+    BestSolutionValue = HeuristicCost(G, S, P, D)
     
     # Initialize tabu list (using a simple array of moves)
     tabuSize = min(20, G.K) # Typical tabu list size
     tabuList = Vector{Tuple{MyInt,MyInt}}()
     
     while ((time()-StartingTimeSeconds) < MaxTimeSeconds)
-        # Store current solution value before move
-        CurrentValue = DummyHeuristicCost(G, H)
         
-        # Perform local search step
-        a, b = LocalSearchStep(G, H)
-        NewValue = DummyHeuristicCost(G, H)
-        
-        # If move is not tabu or satisfies aspiration criterion
-        if !((a,b) in tabuList) || NewValue < BestSolutionValue
-            # Update best solution if improved
-            if NewValue < BestSolutionValue
-                BestSolution = copy(H)
-                BestSolutionValue = NewValue
-                println("New best solution found: ", BestSolutionValue)
-            end
-            
-            # Add move to tabu list
-            push!(tabuList, (a,b))
-            
-            # Maintain tabu list size
-            if length(tabuList) > tabuSize
-                popfirst!(tabuList)
-            end
-        else
-            # Reverse the move if tabu
-            aux = H[a]
-            H[a] = H[b]
-            H[b] = aux
-        end
     end
     
     # Restore best solution found
