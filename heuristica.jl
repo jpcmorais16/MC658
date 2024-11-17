@@ -11,9 +11,9 @@ function Heuristica(G::RouteType,MaxTimeSeconds::MyInt)
 
 	while ((time()-StartingTimeSeconds) < MaxTimeSeconds)
 
-		S, P, D = ConstructInitialSolution(G)
+		S, P, D = ConstructInitialSolution(G, div(MaxTimeSeconds, 50), 0.8)
 
-		LocalBestSolutionValue = LocalSearch(G, S, P, D, MaxTimeSeconds)
+		LocalBestSolutionValue = LocalSearch(G, S, P, D, div(MaxTimeSeconds, 50))
 
 		if (LocalBestSolutionValue < BestSolutionValue)
 			BestSolution = copy(S)

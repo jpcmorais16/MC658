@@ -5,7 +5,8 @@
 
 using Random
 
-function ConstructInitialSolution(G::RouteType)
+function ConstructInitialSolution(G::RouteType, MaxTimeSeconds::MyInt, p::Float64)
+    StartingTimeSeconds = time()
 
     P::Vector{MyInt} =  Vector{MyInt}(undef,G.K) # position of pick i inside the solution vector
     D::Vector{MyInt} =  Vector{MyInt}(undef,G.K) # position of delivery i inside the solution vector
@@ -14,28 +15,32 @@ function ConstructInitialSolution(G::RouteType)
     S[1] = 1
     S[2*G.K] = 1 + G.K
 
-    # Initialize random seed based on current time
-    Random.seed!(Int(time_ns()))
-    pickups = shuffle(collect(2:G.K))
-    
-    # Place pickups and their corresponding deliveries
-    j = 2
-    for i in 1:length(pickups)
-        current_pickup = pickups[i]
-        S[j] = current_pickup
-        S[j + 1] = current_pickup + G.K
-        j = j + 2
-    end
-    P[1] = 1
-    D[1] = 2*G.K
+    while(time() - StartingTimeSeconds < MaxTimeSeconds)
 
-    for i in 2:2:2*G.K - 1
-        P[S[i]] = i
-        D[S[i]] = i + 1
+        Random.seed!(Int(time_ns()))
+        pickups = shuffle(collect(2:G.K))
+        
+        j = 2
+        for i in 1:length(pickups)
+            current_pickup = pickups[i]
+            S[j] = current_pickup
+            S[j + 1] = current_pickup + G.K
+            j = j + 2
+        end
+
+        for i in 1:2*G.K
+            
+            if S[i] <= G.K
+                P[S[i]] = i
+            else
+                D[S[i] - G.K] = i
+            end
+        end 
+
+        S[1] = 1          
+        S[2*G.K] = 1 + G.K 
     end
 
-    S[1] = 1          
-    S[2*G.K] = 1 + G.K 
 
     return S, P, D
 end
@@ -79,7 +84,7 @@ function HeuristicCost(G::RouteType, S::Vector{MyInt}, P::Vector{MyInt}, D::Vect
     
     TotalCost = 0
     
-    for i in 1:G.K - 1
+    for i in 1:2*G.K - 1
         TotalCost = TotalCost + G.Dist[S[i],S[i+1]]
         i = i + 1
     end
@@ -103,8 +108,6 @@ function HeuristicCost(G::RouteType, S::Vector{MyInt}, P::Vector{MyInt}, D::Vect
         end
     end
 
-    TotalCost = TotalCost + G.Dist[S[G.K],S[2*G.K]]
-
     return TotalCost
 end
 
@@ -115,7 +118,7 @@ function LocalSearch(G::RouteType, S::Vector{MyInt}, P::Vector{MyInt}, D::Vector
     println("Iniciado")
     trocas = 0
 
-    while (((time()-StartingTimeSeconds))<MaxTimeSeconds/50)
+    while (((time()-StartingTimeSeconds))<MaxTimeSeconds)
         trocas = trocas + 1
         a = MyRand(2,2 * G.K - 1)
         b = MyRand(2,2 * G.K - 1)
@@ -124,8 +127,6 @@ function LocalSearch(G::RouteType, S::Vector{MyInt}, P::Vector{MyInt}, D::Vector
             continue
         end
 
-        # P[i] = x; S[x] = i
-        # D[i] = y; S[y] = i + G.K
 
         a_pick = true
         b_pick = true
