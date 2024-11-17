@@ -5,7 +5,7 @@
 
 using Random
 
-function ConstructInitialSolution(G::RouteType, MaxTimeSeconds::MyInt, p::Float64)
+function ConstructInitialSolution(G::RouteType, MaxTimeSeconds::MyInt)
     StartingTimeSeconds = time()
 
     P::Vector{MyInt} =  Vector{MyInt}(undef,G.K) # position of pick i inside the solution vector
