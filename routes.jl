@@ -49,8 +49,8 @@ function main()
     # Imprime a instancia gerada
     PrintInstance(G)
     
-    Heuristica(G,maxtime)
-    #Exato(G,maxtime)
+    #DummyHeuristic(G,maxtime)
+    Exato(G,maxtime)
     
     SolutionCost = GetBestSolCost(G)
     println(RA,",",npairs,",",seednumber,",",distfactor,",",timefactor,",",maxtime,",",SolutionCost)
